@@ -7,8 +7,8 @@ module.exports = Object.freeze({
     SECRET_KEY_JWT: "hello friend",
 
     PAYPAL_MODE: 'sandbox', //sandbox or live
-    PAYPAL_CLIENT_ID: 'AYbRvJeQImerka0dvE00pNHjCenRb72jenr5ERICIQsHcauLYMnP-prfnm95bVmq90N7q72UB7kcj_KO',
-    PAYPAL_CLIENT_SECRET: 'EL2r6gQpAcFkBLb2DC8eFsarnDGMu6cN2D1kL33dRvP4Yqya3UaQ2rBhKGC7l_N08f6EDaN_vAbFGnBf',
+    PAYPAL_CLIENT_ID: process.env.PAYPAL_CLIENT_ID,
+    PAYPAL_CLIENT_SECRET: process.env.PAYPAL_CLIENT_SECRET,
 
     DATABASE: [
         {
