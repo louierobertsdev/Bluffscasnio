@@ -12,7 +12,7 @@ const orderDescriptions = {}
 
 cryptoPayment.post("/api/crypto", jsonParser, (req, res, next) => {
     const { amount, crypto_currency, description, products } = req.body
-    createCryptoInvoice(amount, crypto_currency, description, products).then(function(data) {
+    createCryptoInvoice(amount, crypto_currency, description, products).then(function (data) {
         if (data.payload && data.payload.order_id) {
             orderDescriptions[data.payload.order_id] = description
         }
@@ -24,14 +24,14 @@ cryptoPayment.post("/api/crypto_min", jsonParser, (req, res, next) => {
     Promise.all([
         checkMinPayment('btc'),
         checkMinPayment('ltc')
-    ]).then((data)=>{
-        const response = data.map((x)=>{
+    ]).then((data) => {
+        const response = data.map((x) => {
             if (x.result === "crypto_min" && x.payload.fiat_equivalent) {
                 x.payload.fiat_equivalent = x.payload.fiat_equivalent.toFixed(1)
             }
             return x.payload
         })
-        res.json({type: "crypto", payload: response, result: "error"})
+        res.json({ type: "crypto", payload: response, result: "error" })
     }).catch(error => {
         console.error("Error fetching minimum payments:", error);
         res.json({ type: "crypto", payload: error, result: "error" })
@@ -41,11 +41,11 @@ cryptoPayment.post("/api/crypto_min", jsonParser, (req, res, next) => {
 cryptoPayment.post("/api/crypto_estimated_price", jsonParser, (req, res, next) => {
     const { amount, currency_from, currency_to } = req.body
     console.log(amount, currency_from, currency_to)
-    if(!amount || amount === 0 || !currency_from || !currency_to){
-        return res.json({ type: "crypto", result: "error", payload: {"estimated_amount": 0} })
+    if (!amount || amount === 0 || !currency_from || !currency_to) {
+        return res.json({ type: "crypto", result: "error", payload: { "estimated_amount": 0 } })
     }
 
-    getEstimatedPrice(amount, currency_from, currency_to).then((data)=>{
+    getEstimatedPrice(amount, currency_from, currency_to).then((data) => {
         return res.json({ type: "crypto", result: "success", payload: data })
     })
 })
@@ -53,7 +53,7 @@ cryptoPayment.post("/api/crypto_estimated_price", jsonParser, (req, res, next) =
 cryptoPayment.post('/api/crypto/success', jsonParser, (req, res) => {
     const { payment_status, order_id, token_id } = req.body
 
-    if(!order_id || !token_id){
+    if (!order_id || !token_id) {
         return res.json({ type: "crypto", result: "error", payload: 'error_charge' })
     }
 
@@ -85,30 +85,31 @@ cryptoPayment.post('/api/crypto/success', jsonParser, (req, res) => {
     }
 
     if (payment_status === 'paid' || payment_status === 'finished' || payment_status === 'successful' || payment_status === 'success') {
-        fetchPaymentDetails(order_id).then((data)=>{
+        fetchPaymentDetails(order_id).then((data) => {
             //res.json({ type: "crypto", result: "success", payload: {...data.payload, order_description: "Test Payment Description", payment_details: {products: productsCrypto}} })
-            res.json({ 
-                type: "crypto", 
-                result: "success", 
+            res.json({
+                type: "crypto",
+                result: "success",
                 payload: {
-                    ...dummyData, 
+                    ...dummyData,
                     order_id: order_id,
-                    order_description: "Crypto payment", 
-                    payment_details: {products: productsCrypto}},
-                    order_description: orderDescriptions[order_id] || "Crypto payment",
-                })
+                    order_description: "Crypto payment",
+                    payment_details: { products: productsCrypto }
+                },
+                order_description: orderDescriptions[order_id] || "Crypto payment",
+            })
         })
     } else {
         res.json({ type: "crypto", result: "error", payload: "error_charge" })
     }
 })
-  
+
 cryptoPayment.post('/api/crypto/cancel', jsonParser, (req, res) => {
-    res.json({ type: "crypto", result: "cancel"}) 
+    res.json({ type: "crypto", result: "cancel" })
 })
 
 function createCryptoInvoice(amount, crypto_currency, description, products) {
-    return new Promise(function(resolve, reject){
+    return new Promise(function (resolve, reject) {
         try {
             const payload = {
                 price_amount: amount,
@@ -116,63 +117,63 @@ function createCryptoInvoice(amount, crypto_currency, description, products) {
                 pay_currency: crypto_currency,
                 order_description: description,
                 success_url: BASE_URL + "/api/crypto/success",
-                cancel_url: BASE_URL + "/api/crypto/cancel"   
+                cancel_url: BASE_URL + "/api/crypto/cancel"
             }
             const headers = {
                 'x-api-key': apiKey,
                 'Content-Type': 'application/json',
             }
             productsCrypto = products
-            axios.post(`${apiUrl}/invoice`, payload, { headers }).then(function(response){
-                resolve({type: "crypto", result: "success", payload: {...response.data}})
-            }).catch(function(err){
-                resolve({type: "crypto", result: "error", payload: err})
+            axios.post(`${apiUrl}/invoice`, payload, { headers }).then(function (response) {
+                resolve({ type: "crypto", result: "success", payload: { ...response.data } })
+            }).catch(function (err) {
+                resolve({ type: "crypto", result: "error", payload: err })
             })
         } catch (err) {
-            resolve({type: "crypto", result: "error", payload: err})
+            resolve({ type: "crypto", result: "error", payload: err })
         }
     })
 }
 
-function checkMinPayment(currency="btc") {
+function checkMinPayment(currency = "btc") {
     const headers = {
         'x-api-key': apiKey,
     }
     return axios.get(`${apiUrl}/min-amount?currency_from=${currency}&fiat_equivalent=usd`, { headers })
         .then(response => {
-            return { type: "crypto", payload: {...response.data}, result: "crypto_min" }
+            return { type: "crypto", payload: { ...response.data }, result: "crypto_min" }
         })
         .catch(error => {
             return { type: "crypto", payload: error, result: "error" }
         })
 }
 
-function fetchPaymentDetails(order_id){
-    return new Promise(function(resolve, reject){
-        try {
-            const headers = {
-                'x-api-key': apiKey,
-            } 
-            axios.get(apiUrl + "/invoice/" + order_id, { headers }).then(function(response){
-                resolve({payload: response.data})
-            }).catch(function(err){
-                resolve({payload: err, result: "error"})
-            })
-        } catch (err) {
-            resolve({payload: err, result: "error"})
-        }
-    }) 
-}
-
-function getEstimatedPrice(amount, currency_from, currency_to){
+function fetchPaymentDetails(order_id) {
     return new Promise(function (resolve, reject) {
         try {
             const headers = {
                 'x-api-key': apiKey,
-            } 
-            axios.get(apiUrl + "/estimate?amount=" + amount + "&currency_from=" + currency_from + "&currency_to=" + currency_to, { headers }).then(function(response){
+            }
+            axios.get(apiUrl + "/invoice/" + order_id, { headers }).then(function (response) {
+                resolve({ payload: response.data })
+            }).catch(function (err) {
+                resolve({ payload: err, result: "error" })
+            })
+        } catch (err) {
+            resolve({ payload: err, result: "error" })
+        }
+    })
+}
+
+function getEstimatedPrice(amount, currency_from, currency_to) {
+    return new Promise(function (resolve, reject) {
+        try {
+            const headers = {
+                'x-api-key': apiKey,
+            }
+            axios.get(apiUrl + "/estimate?amount=" + amount + "&currency_from=" + currency_from + "&currency_to=" + currency_to, { headers }).then(function (response) {
                 resolve(response.data)
-            }).catch(function(err){
+            }).catch(function (err) {
                 resolve(err)
             })
         } catch (err) {
