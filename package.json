@@ -4,16 +4,16 @@
   "description": "server",
   "main": "index.js",
   "scripts": {
-    "start": "set NODE_ENV=production && nodemon server/index.js",
+    "start": "cls && concurrently \"npm run server:dev\" \"npm run client\"",
+    "prod:start": "set NODE_ENV=production && nodemon server/index.js",
     "server": "set NODE_ENV=production && nodemon server/index.js",
     "server:dev": "set NODE_ENV=development && nodemon server/index.js",
     "client": "npm start --prefix client",
-    "dev": "cls && concurrently \"npm run server:dev\" \"npm run client\"",
     "build": "npm install && cd client && npm install && npm run build"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/oanapopescu93/casino"
+    "url": "git+https://github.com/labs-web3/Labs-Casino"
   },
   "keywords": [
     "casino",
@@ -35,7 +35,7 @@
   "bugs": {
     "url": "https://github.com/oanapopescu93/test/issues"
   },
-  "homepage": "https://github.com/oanapopescu93/casino#readme",
+  "homepage": "https://github.com/labs-web3/Labs-Casino#readme",
   "dependencies": {
     "axios": "^1.3.6",
     "bitcoinjs-lib": "^6.1.3",
