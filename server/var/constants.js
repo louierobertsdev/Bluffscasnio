@@ -3,7 +3,7 @@ module.exports = Object.freeze({
     AUTH_PASS: process.env.AUTH_PASS,
     AUTH_FROM: "oanapopescu93@gmail.com",
 
-    SECRET_KEY: 'vOVH6sdmpNWjRRIqCc7rdxs01lwHzfr3',
+    SECRET_KEY: process.env.SECRET_KEY,
     SECRET_KEY_JWT: "hello friend",
 
     PAYPAL_MODE: 'sandbox', //sandbox or live
