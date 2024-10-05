@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/labs-web3/Labs-Casino"
+    "url": "git+https://github.com/labs-web3-org/labs-bunny-bet"
   },
   "keywords": [
     "casino",
@@ -35,7 +35,7 @@
   "bugs": {
     "url": "https://github.com/oanapopescu93/test/issues"
   },
-  "homepage": "https://github.com/labs-web3/Labs-Casino#readme",
+  "homepage": "https://github.com/labs-web3-org/labs-bunny-bet#readme",
   "dependencies": {
     "axios": "^1.3.6",
     "bitcoinjs-lib": "^6.1.3",

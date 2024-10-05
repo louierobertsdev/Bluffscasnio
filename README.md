@@ -29,7 +29,7 @@ BunnyBet is your gateway to a new era of online gambling, where trust and fairne
 1. **Clone the Repository:**
 
    ```bash
-   git clone https://github.com/labs-web3/Labs-Casino.git
+   git clone https://github.com/labs-web3-org/labs-bunny-bet.git
    ```
 
 2. **Install Dependencies:**
