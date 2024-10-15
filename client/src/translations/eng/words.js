@@ -136,7 +136,18 @@ var word_bank = {
 
     language: "Language",
     date_calendar: "Date",
-    currency: "Currency",  
+    currency: "Currency", 
+    theme: "Theme",
+    red: "Red",
+    orange: "Orange",
+    yellow: "Yellow",
+    green: "Green",
+    blue: "Blue",
+    brown: "Brown",
+    purple: "Purple",
+    black: "Black",
+    grey: "Grey",
+    white: "White",
     
     dashboard: "Dashboard",
     choose_profile_pic: "Choose profile pic",
@@ -193,7 +204,6 @@ var word_bank = {
     amount_too_low: "The amount is too low.",
     createSource_error: "Failed to attach the card to the customer.",
     addNewCard_error: "Failed to create a card token.", 
-    createNewCustomer_error: "Failed to create a new customer.",
     submit: "Submit",
     pay: "Pay",
     min_amount: "Minimum amount",
@@ -225,6 +235,7 @@ var word_bank = {
     validate_message_year: "This is not a valid year",
     validate_message_cvv: "This is not a valid CVV",
     validate_message_bitcoinAddress: "This is not a valid Bitcoin address",
+    validate_message_iban: "This is not an IBAN",
     continue: "Continue",
     save: "Save",
     payment_success: "Payment successful",
@@ -245,6 +256,10 @@ var word_bank = {
     requires_capture: "Requires Capture",
     canceled: "Canceled",
     succeeded: "Succeeded",
+    createNewCustomer_error: "Failed to create customer. Please try again.",
+    createPaymentMethod_error: "Failed to create payment method. Please check your card details.",
+    attachPaymentMethod_error: "Failed to attach payment method to customer.",
+    paymentIntent_error: "Failed to process payment. Please try again later.",
 
     // order
     order: "Order",
@@ -269,6 +284,9 @@ var word_bank = {
     withdraw: "Withdraw",    
     no_withdrawal: "No withdrawals",
     not_enough_money_withdrawal: "You don't have enough money to make a withdrawal.",
+    withdraw_instructions: "Withdraw instructions will come here",
+    withdraw_success: "Withdraw success",
+    withdraw_failed: "Withdraw failed",
 
     // blackjack
     start: "Start",

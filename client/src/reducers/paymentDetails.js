@@ -1,18 +1,18 @@
 import { createSlice } from '@reduxjs/toolkit'
 import { getCookie, isEmpty, setCookie } from '../utils/utils'
 
-const initialState = {    
+const initialState = {
+    option: !isEmpty(getCookie("casino_payment_option")) ? getCookie("casino_payment_option") : "card", //card, paypal, crypto
     cardNumber: !isEmpty(getCookie("casino_payment_cardNumber")) ? getCookie("casino_payment_cardNumber") : "",
     city: !isEmpty(getCookie("casino_payment_city")) ? getCookie("casino_payment_city") : "",
     country: !isEmpty(getCookie("casino_payment_country")) ? getCookie("casino_payment_country") : "",
+    crypto: !isEmpty(getCookie("casino_payment_crypto")) ? getCookie("casino_payment_crypto") : "btc", //btc, ltc
     cvv: !isEmpty(getCookie("casino_payment_cvv")) ? getCookie("casino_payment_cvv") : "",
     email: !isEmpty(getCookie("casino_payment_email")) ? getCookie("casino_payment_email") : "",
     month: !isEmpty(getCookie("casino_payment_month")) ? getCookie("casino_payment_month") : -1,
-    year: !isEmpty(getCookie("casino_payment_year")) ? getCookie("casino_payment_year") : "",
-    name: !isEmpty(getCookie("casino_payment_name")) ? getCookie("casino_payment_name") : "",
+    name: !isEmpty(getCookie("casino_payment_name")) ? getCookie("casino_payment_name") : "",    
     phone: !isEmpty(getCookie("casino_payment_phone")) ? getCookie("casino_payment_phone") : "",
-    option: !isEmpty(getCookie("casino_payment_option")) ? getCookie("casino_payment_option") : "1",   // 1 = card, 2 = paypal, 3 = crypto
-    crypto: !isEmpty(getCookie("casino_payment_crypto")) ? getCookie("casino_payment_crypto") : "btc" //btc, ltc
+    year: !isEmpty(getCookie("casino_payment_year")) ? getCookie("casino_payment_year") : "",
 }
 
 const paymentDetailsSlice = createSlice({
