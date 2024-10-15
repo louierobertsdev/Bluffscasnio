@@ -9,24 +9,24 @@ const MINIMUM_AMOUNT_USD = 1000
 stripePayment.post("/api/stripe", jsonParser, (req, res, next) => {
     const { name, email, country, city, phone, cardNumber, month, year, cvv, amount, products, description } = req.body
 
-    if (!name || !email || !cardNumber || !month || !year || !cvv) {
+    if(!name || !email || !cardNumber || !month || !year || !cvv){        
         return res.json({ type: "stripe", result: "error", payload: 'error_charge' })
-    }
+    }    
 
     if (amount) {
-        if (amount * 100 < MINIMUM_AMOUNT_USD) {
+        if (amount * 100 < MINIMUM_AMOUNT_USD) {            
             return res.json({ type: "stripe", result: "error", payload: 'amount_too_low' })
         }
 
         //create items
         const lineItems = products.map((product) => {
             return {
-                name: product.name_eng,
+                name: product.name_eng,                
                 quantity: product.qty,
                 price: Math.round(product.price * 100), // price in cents
             };
         });
-
+        
         const metadata = {};
         lineItems.forEach((item, index) => {
             metadata[`product_${index + 1}`] = `${item.name}: ${item.quantity} x ${item.price / 100} USD`
@@ -41,7 +41,7 @@ stripePayment.post("/api/stripe", jsonParser, (req, res, next) => {
                 exp_year: parseInt(year),
                 cvc: cvv,
             },
-        }
+        }        
         let paymentMethod = null
         let paymentIntent = {
             amount: amount * 100,
@@ -54,17 +54,17 @@ stripePayment.post("/api/stripe", jsonParser, (req, res, next) => {
         }
 
         try {
-            createNewCustomer({ name, email, phone, description: "BunnyBet customer", address: { country, city } }).then((res1) => {
-                if (res1) {
+            createNewCustomer({ name, email, phone, description: "BunnyBet customer", address: { country, city } }).then((res1)=>{
+                if(res1){
                     customer = res1
-                    createPaymentMethod(card).then((res2) => {
-                        if (res2) {
+                    createPaymentMethod(card).then((res2)=>{
+                        if(res2){
                             paymentMethod = res2
-                            attachPaymentMethod(paymentMethod.id, customer.id).then((res3) => {
-                                if (res3) {
+                            attachPaymentMethod(paymentMethod.id, customer.id).then((res3)=>{
+                                if(res3){
                                     paymentIntent.customer = customer.id
                                     paymentIntent.payment_method = paymentMethod.id
-                                    paymentIntents(paymentIntent).then((res4) => {
+                                    paymentIntents(paymentIntent).then((res4)=>{
                                         let payload = res4
                                         payload.payment_details = {
                                             type: 'stripe',
@@ -83,25 +83,25 @@ stripePayment.post("/api/stripe", jsonParser, (req, res, next) => {
                                             products
                                         }
                                         res.json({ type: "stripe", result: "success", payload })
-                                    }).catch((err) => {
-                                        res.json({ type: "stripe", result: "error", payload: 'error_paymentIntent', details: err.message });
+                                    }).catch((err)=>{
+                                        res.json({ type: "stripe", result: "error", payload: 'paymentIntent_error', details: err.message });
                                     })
                                 } else {
                                     res.json({ type: "stripe", result: "error", payload: 'attachPaymentMethod_error' })
                                 }
-                            }).catch((err) => {
+                            }).catch((err)=>{
                                 res.json({ type: "stripe", result: "error", payload: 'attachPaymentMethod_error', details: err.message });
                             })
                         } else {
                             res.json({ type: "stripe", result: "error", payload: 'createPaymentMethod_error' })
                         }
-                    }).catch((err) => {
+                    }).catch((err)=>{
                         res.json({ type: "stripe", result: "error", payload: 'createPaymentMethod_error', details: err.message })
                     })
                 } else {
                     res.json({ type: "stripe", result: "error", payload: 'createNewCustomer_error' })
                 }
-            }).catch((err) => {
+            }).catch((err)=>{
                 res.json({ type: "stripe", result: "error", payload: 'createNewCustomer_error', details: err.message })
             })
         } catch (error) {
@@ -114,9 +114,9 @@ stripePayment.post("/api/stripe", jsonParser, (req, res, next) => {
 
 module.exports = stripePayment
 
-function createNewCustomer(data) {
-    return new Promise((resolve, reject) => {
-        stripe.customers.create(data).then((res) => {
+function createNewCustomer(data){
+    return new Promise((resolve, reject)=>{
+        stripe.customers.create(data).then((res)=>{
             resolve(res)
         }).catch((err) => {
             console.error('error-createNewCustomer--> ' + err)
@@ -124,8 +124,8 @@ function createNewCustomer(data) {
         })
     })
 }
-function createPaymentMethod(data) {
-    return new Promise((resolve, reject) => {
+function createPaymentMethod(data){
+    return new Promise((resolve, reject)=>{
         stripe.paymentMethods.create(data).then(function (res) {
             resolve(res)
         }).catch(err => {
@@ -134,9 +134,9 @@ function createPaymentMethod(data) {
         })
     })
 }
-function attachPaymentMethod(paymentMethod_id, customer_id) {
+function attachPaymentMethod(paymentMethod_id, customer_id){
     return new Promise(function (resolve, reject) {
-        stripe.paymentMethods.attach(paymentMethod_id, { customer: customer_id }).then((res) => {
+        stripe.paymentMethods.attach(paymentMethod_id, { customer: customer_id }).then((res)=>{
             resolve(res)
         }).catch((err) => {
             console.error('error-attachPaymentMethod--> ' + err)
@@ -144,9 +144,9 @@ function attachPaymentMethod(paymentMethod_id, customer_id) {
         })
     })
 }
-function paymentIntents(data) {
-    return new Promise((resolve, reject) => {
-        stripe.paymentIntents.create(data).then((res) => {
+function paymentIntents(data){
+    return new Promise((resolve, reject)=>{
+        stripe.paymentIntents.create(data).then((res)=>{
             resolve(res)
         }).catch(err => {
             console.error('error-paymentIntents--> ' + err)

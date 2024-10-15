@@ -4,7 +4,7 @@ var paypalPayment = express.Router()
 
 var { PAYPAL_MODE, PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET } = require('../var/constants')
 
-var jsonParser = bodyParser.json()
+var jsonParser = bodyParser.json() 
 const paypal = require('paypal-rest-sdk')
 paypal.configure({
   'mode': PAYPAL_MODE,
@@ -19,11 +19,11 @@ let productsPaypal = []
 paypalPayment.post('/api/paypal', jsonParser, (req, res, next) => {
   const { amount, products, description } = req.body
 
-  if (!BASE_URL) {
+  if(!BASE_URL){
     return res.json({ type: "paypal", result: "error", payload: 'BASE_URL' })
   }
 
-  if (amount) {
+  if(amount){
     // Calculate total amount based on lineItems
     const totalAmount = products.reduce((acc, product) => {
       return acc + (product.price * product.qty)
@@ -34,7 +34,7 @@ paypalPayment.post('/api/paypal', jsonParser, (req, res, next) => {
     if (totalAmount < MINIMUM_AMOUNT_USD) {
       return res.json({ type: "paypal", result: "error", payload: 'amount_too_low' })
     }
-
+   
     let itemList = products.map(product => {
       return {
         name: product.name_eng,
@@ -65,11 +65,11 @@ paypalPayment.post('/api/paypal', jsonParser, (req, res, next) => {
           }
         },
       ],
-    }
+    }    
 
     paypal.payment.create(create_payment_json, function (error, payment) {
       if (error) {
-        res.json({ type: "paypal", result: "error", payload: 'paypal_error', details: error.response })
+        res.json({type: "paypal", result: "error", payload: 'paypal_error', details: error.response})
       } else {
         let approvalUrl = payment.links.find(link => link.rel === "approval_url")
         if (approvalUrl) {
@@ -80,48 +80,48 @@ paypalPayment.post('/api/paypal', jsonParser, (req, res, next) => {
             details: payment
           })
         } else {
-          res.json({ type: "paypal", result: "error", payload: 'approval_url_not_found' })
+          res.json({ type: "paypal", result: "error", payload: 'approval_url_not_found'})
         }
       }
     })
   } else {
-    return res.json({ type: "paypal", result: "error", payload: 'no_money' })
+    return res.json({type: "paypal", result: "error", payload: 'no_money'})
   }
 })
 
 paypalPayment.post('/api/paypal/success', jsonParser, (req, res) => {
-  const { payerId, paymentId } = req.body
+  const { payerId, paymentId } = req.body 
 
-  if (!payerId || !paymentId) {
+  if(!payerId || !paymentId){
     return res.json({ type: "paypal", result: "error", payload: 'error_charge' })
   }
 
-  if (amountPaypal && amountPaypal > 0) {
+  if(amountPaypal && amountPaypal > 0){  
     const execute_payment_json = {
       payer_id: payerId,
       transactions: [{
         amount: {
-          currency: 'USD',
-          total: amountPaypal.toFixed(2),
+          currency: 'USD', 
+          total: amountPaypal.toFixed(2), 
         },
       }],
-    }
+    }    
     paypal.payment.execute(paymentId, execute_payment_json, function (error, payment) {
       if (error) {
         res.json({ type: "paypal", result: "error", payload: 'error_charge', details: error.response })
       } else {
-        res.json({ type: "paypal", result: "success", payload: { ...payment, payment_details: { products: productsPaypal } } })
+        res.json({ type: "paypal", result: "success", payload: {...payment, payment_details: {products: productsPaypal}} })
       }
     })
   } else {
     res.json({ type: "paypal", result: "error", payload: 'error_charge' })
-  }
+  }  
 })
 
 paypalPayment.post('/api/paypal/cancel', jsonParser, (req, res) => {
-  const { token } = req.body
-  if (token) {
-    res.json({ type: "paypal", result: "cancel" })
+  const { token } = req.body 
+  if(token){
+    res.json({ type: "paypal", result: "cancel"}) 
   }
 })
 
