@@ -1,58 +1,77 @@
 import React, { useEffect, useState } from 'react'
-import { translate } from '../../../translations/translate'
-import PaymentForm from './paymentForm'
-import { Col, Row, Button } from 'react-bootstrap'
-import Counter from '../counter'
+import { Col, Row } from 'react-bootstrap'
 import { useDispatch, useSelector } from 'react-redux'
-import { changePage, changeGame, changeGamePage } from '../../../reducers/page'
-import $ from "jquery"
-import { convertCurrency, getCarrotsFromProducts, getProducts, isEmpty, paymentErrors, postData } from '../../../utils/utils'
-import { validateCVV, validateCard, validateCardMonthYear, validateInput } from '../../../utils/validate'
-import { changePopup } from '../../../reducers/popup'
-import PaymentCart from './paymentCart'
+
 import PaymentDetails from './paymentDetails'
+import PaymentForm from './paymentForm'
+import PaymentCart from './paymentCart'
+
+import { changePage, changeGame, changeGamePage } from '../../../reducers/page'
+
+import countriesData from '../../../utils/constants/countries.json'
+import { checkoutData, convertCurrency, getCarrotsFromProducts, getProducts, isEmpty, postData } from '../../../utils/utils'
+import { validateCard, validateInput } from '../../../utils/validate'
 import { updatePaymentDetails } from '../../../reducers/paymentDetails'
-import { FontAwesomeIcon} from '@fortawesome/react-fontawesome'
-import { faStore, faUser, faCartShopping} from '@fortawesome/free-solid-svg-icons'
+import { changePopup } from '../../../reducers/popup'
+import { translate } from '../../../translations/translate'
 
 function Payment(props){
-    const {template, home, settings, exchange_rates, socket} = props
-    const {lang, currency} = settings
+    const { template, home, user, settings, exchange_rates, socket } = props
+    const { lang, currency } = settings
+    const { uuid } = user
+    const minimum_amount_usd = 10
+    const maxAmount = 100
+    const price_per_carrot = 1
+    const minimum_amount = convertCurrency(minimum_amount_usd, currency, exchange_rates)
 
     let dispatch = useDispatch()
-    let max_amount = 100
-    let price_per_carrot = 1
 
     let payment_details = useSelector(state => state.paymentDetails)
     let cart = useSelector(state => state.cart.cart) 
     let promo = useSelector(state => state.cart.promo)
 
-    const [radioOne, setRadioOne] = useState(payment_details.option === "1" ? true : false)
-    const [radioTwo, setRadioTwo] = useState(payment_details.option === "2" ? true : false)
-    const [radioThree, setRadioThree] = useState(payment_details.option === "3" ? true : false)
-    
-    const [cryptoChoice, setCryptoChoice] = useState(payment_details.crypto)
-
-    const [qty, setQty] = useState(1)
-    const [amount, setAmount] = useState(1)
-    const [month, setMonth] = useState(payment_details.month !== -1 ? payment_details.month : -1)
-    const [year, setYear] = useState(payment_details.year !== "" ? payment_details.year : "")
-    const [country, setCountry] = useState(payment_details.country !== "" ? payment_details.country : "")
-    const [city, setCity] = useState(payment_details.city !== "" ? payment_details.city : "")
-    const [gateway, setGateway] = useState("stripe")
-    const [cryptoData, setCryptoData] = useState(null)
-    const [fiatEquivalent, setFiatEquivalent] = useState(null)
-
-    const [paymentDetails, setPaymentDetails] = useState(null)
-    const [paymentError, setPaymentError] = useState(paymentErrors())
-
-    const [paymentSending, setPaymentSending] = useState(false)
-    
-    let gatewayDetailsMandatory = {
-        stripe: ["name", "email", "payment_methode", "card_number", "year", "month", "cvv"],
-        paypal: ["payment_methode"],
-        crypto: ["payment_methode"]
+    const errors_default = {
+        name: { fill: true, validate: true, fill_message: "fill_field", validate_message: "validate_message_name" },
+        email: { fill: true, validate: true, fill_message: "fill_field", validate_message: "validate_message_email" },
+        phone: { fill: true, validate: true, fill_message: "fill_field", validate_message: "validate_message_phone" },
+        country: { fill: true, validate: true, fill_message: "fill_field" },
+        city: { fill: true, validate: true, fill_message: "fill_field" },
+        cardNumber: { fill: true, validate: true, fill_message: "fill_field", validate_message: "validate_message_cardNumber" },
+        month: { fill: true, validate: true, fill_message: "fill_field", validate_message: "validate_message_month" },
+        year: { fill: true, validate: true, fill_message: "fill_field", validate_message: "validate_message_year" },
+        cvv: { fill: true, validate: true, fill_message: "fill_field", validate_message: "validate_message_cvv" },
+        bitcoinAddress: { fill: true, validate: true, fill_message: "fill_field", validate_message: "validate_message_bitcoinAddress" }
     }
+    const months = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    let cryptoArray = [
+        {value: 'btc', text: "Bitcoin"},
+        {value: 'ltc', text: "Litcoin"}
+    ]
+    
+    const [paymentDetails, setPaymentDetails] = useState(payment_details)
+    const [editCardNumber, setEditCardNumber] = useState(false)
+    const [paymentContinue, setPaymentContinue] = useState(null)
+    const [paymentError, setPaymentError] = useState(errors_default)
+    const [countries, setCountries] = useState([])
+    const [cities, setCities] = useState([])
+    const [filteredCountries, setFilteredCountries] = useState([])
+    const [filteredCountry, setFilteredCountry] = useState("")
+    const [filteredCities, setFilteredCities] = useState([])
+    const [filteredCity, setFilteredCity] = useState("")
+    const monthOptions = checkoutData().monthOptions
+    const yearOptions = checkoutData().yearOptions    
+    const [cryptoData, setCryptoData] = useState(null)
+    const [cryptoDataFound, setCryptoDataFound] = useState(null)
+    const [fiatEquivalent, setFiatEquivalent] = useState(null)
+    const [cryptoChoice, setCryptoChoice] = useState(payment_details.crypto ? payment_details.crypto : cryptoArray[0].value)
+    const [loadingCryptoData, setLoadingCryptoData] = useState(false)
+
+    const [total, setTotal] = useState(0)
+    const [totalPromo, setTotalPromo] = useState(0)
+    const [qty, setQty] = useState(1)
+    const [paymentSending, setPaymentSending] = useState(false)
+
+    let market = home.market ? home.market : []
 
     useEffect(() => {
         let pay = 0
@@ -61,7 +80,8 @@ function Payment(props){
                 pay = qty * price_per_carrot
                 break
             case "checkout":
-                pay = totalPriceSum(true)
+                pay = totalPriceSum()
+                setTotal(parseFloat(pay))
                 if(promo && Object.keys(promo).length>0){
                     pay = (pay - (pay * promo.discount)/100).toFixed(2)
                 }
@@ -69,136 +89,25 @@ function Payment(props){
             default:
                 break
         }
-        setAmount(parseFloat(pay))
+        setTotalPromo(parseFloat(pay))
     }, [])
 
-    function totalPriceSum(exchange=false){
-        let market = home.market ? home.market : [] 
+    function totalPriceSum(){
         let total = 0
         for(let i in cart){
             let product = market.filter(a => a.id === cart[i].id)
             if(product && product[0] && product[0].price){
-                if(exchange){
-                    total = total + convertCurrency(product[0].price, "USD", exchange_rates) * cart[i].qty
-                } else {
-                    total = total + convertCurrency(product[0].price, currency, exchange_rates) * cart[i].qty
-                }
+                total = total + product[0].price * cart[i].qty
             }
         }
-        return total
-    }
-
-    function handleChangeCheck(x){
-        switch(x){
-            case "radio3":	
-                setRadioOne(false)	
-                setRadioTwo(false)
-                setRadioThree(true)
-                if(typeof props.getChanges === "function"){
-                    props.getChanges({type: 'gateway', value: 'crypto'})
-                }
-                break
-            case "radio2":	
-                setRadioOne(false)
-                setRadioTwo(true)
-                setRadioThree(false)
-                if(typeof props.getChanges === "function"){
-                    props.getChanges({type: 'gateway', value: 'paypal'})
-                }
-                break
-            case "radio1":
-                setRadioOne(true)
-                setRadioTwo(false)
-                setRadioThree(false)
-                if(typeof props.getChanges === "function"){
-                    props.getChanges({type: 'gateway', value: 'stripe'})
-                }
-                break
-            default:
-                break
-        }
-    }
-
-    function handleCryptoChange(choice){
-        setCryptoChoice(choice)
+        return total.toFixed(2)
     }
 
     useEffect(() => {
-        let url = "/api/crypto_min"
-        let payload = {
-            amount: amount
-        }
-        postData(url, payload).then((res) => {
-            setCryptoData(res.payload)
-        })
+        const countryNames = Object.keys(countriesData)
+        setCountries(countryNames)
+        setFilteredCountries(countryNames)
     }, [])
-
-    useEffect(() => {
-        if(cryptoData){
-            const found = cryptoData.find(item => item.currency_from === cryptoChoice)
-            let fiat_equivalent = found?.fiat_equivalent
-            if(fiat_equivalent && fiat_equivalent < amount){
-                let url = "/api/crypto_estimated_price"
-                let currency_from = currency.toLowerCase()
-                let currency_to = cryptoChoice        
-                let payload = {
-                    amount: amount,
-                    currency_from, 
-                    currency_to,
-                }
-                postData(url, payload).then((res) => {
-                    setFiatEquivalent(res.payload)
-                })
-            } else {
-                setFiatEquivalent({estimated_amount: -1}) //if it is -1 it means we must show a message
-            }
-        }
-    }, [amount, currency, cryptoData, cryptoChoice])
-
-    useEffect(() => {
-        switch (payment_details.option) {
-            case "1":
-                setGateway("stripe")
-                break;
-            case "2":
-                setGateway("paypal")
-                break;
-            case "3":
-                setGateway("crypto")
-                break;
-            default:
-                setGateway("stripe")
-        }
-    }, [payment_details.option])
-
-    function getChanges(data){
-        let type = data.type
-        let value = data.value
-        switch(type){
-            case "month":
-                setMonth(value)
-                break
-            case "year":
-                setYear(value)
-                break
-            case "country":
-                setCountry(value)
-                break
-            case "city":
-                setCity(value)
-                break
-            case "gateway":
-                setGateway(value)
-                break
-            default:
-                break
-        }
-    }
-
-    function updateQty(x){
-        setQty(x)
-        setAmount(x * price_per_carrot)
-    }
 
     function handleBack(choice=null){
         if(choice){
@@ -206,205 +115,287 @@ function Payment(props){
             dispatch(changeGame(null))
             dispatch(changeGamePage(choice))
         } else {
-            setPaymentDetails(null)
+            setPaymentContinue(false)
         }        
     }
 
-    function getFormDetails(){
-        let form = $('#payment_form').serializeArray()
-        let payload = {
-            name: getValueFromForm(form, 'name'),
-            email: getValueFromForm(form, 'email'),
-            phone: getValueFromForm(form, 'phone'),
-            country,
-            city,
-            crypto: cryptoChoice,
-        }
-
-        let radio1 = getValueFromForm(form, 'radio1')
-        let radio2 = getValueFromForm(form, 'radio2')
-        let radio3 = getValueFromForm(form, 'radio3')
-
-        if (radio1 === "on") {
-            payload.option = '1'
-        } else if (radio2 === "on") {
-            payload.option = '2'
-        } else if (radio3 === "on") {
-            payload.option = '3'
-        }        
-
-        let cardNumber = getValueFromForm(form, 'card_number')
-        if(cardNumber){
-            payload.cardNumber = cardNumber
-        }
-        let cvv = getValueFromForm(form, 'cvv')
-        if(cvv){
-            payload.cvv = cvv
-        }
-        if(month){
-            payload.month = month
-        }
-        if(year){
-            payload.year = year
-        }
-
-        return payload
+    function handleChangeCheck(value){
+        setPaymentDetails({...paymentDetails, option: value})
     }
 
-    function handleSubmit(){
-        if($('#payment_form') && qty > 0){
-            validateSubmit(getFormDetails())
+    function handleInputChange(e){
+        const { name, value } = e.target
+        setPaymentDetails({...paymentDetails, [name]: value})
+    }
+
+    function handleCountryChange(value){
+        const selectedCountry = value
+        setPaymentDetails({...paymentDetails, country: selectedCountry, city: ""})
+        const selectedCities = countriesData[selectedCountry] || []
+        setCities(selectedCities)
+        setFilteredCities(selectedCities)
+        setFilteredCity("")
+    }
+
+    function handleFilterCountries(e){
+        const filtered = countries.filter(country => country.toLowerCase().includes(e.toLowerCase()))
+
+        setFilteredCountries(filtered)
+        setFilteredCountry(e)
+
+        setFilteredCities([])
+        setFilteredCity("")
+    }
+
+    function handleCityChange(value){
+        setPaymentDetails({...paymentDetails, city: value})
+    }
+
+    function handleFilterCities(e){        
+        const filtered = cities.filter(city => city.toLowerCase().includes(e.toLowerCase()))
+        setFilteredCities(filtered)
+        setFilteredCity(e)
+    }
+
+    function changeMonth(value){
+        setPaymentDetails({...paymentDetails, month: value})
+    }
+    function changeYear(value){
+        setPaymentDetails({...paymentDetails, year: value})
+    }
+
+    function handleEditCardNumber(){
+        setEditCardNumber(true)
+    }
+
+    function handleSaveCardNumber(){
+        setEditCardNumber(false)
+    }
+
+    function checkCardForm(){
+        const { name, phone, email, country, city, cardNumber, month, year, cvv } = paymentDetails        
+        let errors = errors_default
+
+        if (isEmpty(name)) {
+            errors.name.fill = false
+        }
+        if (isEmpty(phone)) {
+            errors.phone.fill = false
+        }
+        if (isEmpty(email)) {
+            errors.email.fill = false
+        }
+        if (isEmpty(country)) {
+            errors.country.fill = false
+        }
+        if (isEmpty(city)) {
+            errors.city.fill = false
+        }
+        if (isEmpty(cardNumber)) {
+            errors.cardNumber.fill = false
+        }
+        if(parseInt(month) === -1){
+            errors.month.fill = false
+        }
+        if(isEmpty(year)){
+            errors.year.fill = false
+        }
+        if (isEmpty(cvv)) {
+            errors.cvv.fill = false
+        }
+
+        if(!validateInput(name, "name")){
+            errors.name.validate = false
+        }                  
+        if(!validateInput(phone, "phone")){
+            errors.phone.validate = false
+        }
+        if(!validateInput(email, "email")){
+            errors.email.validate = false
+        }  
+        if(!validateCard(cardNumber)){ // test card details --> 4242424242424242
+            errors.cardNumber.validate = false
+            errors.month.validate = false
+            errors.year.validate = false
+        }
+
+        return errors
+    }
+
+    function validateForm(){               
+        let errors = null
+        let problem = false
+
+        if(paymentDetails.option === "card"){
+            errors = checkCardForm()
+            setPaymentError(errors)
+            problem = Object.values(errors).some(error => !error.fill || !error.validate) // Check if there is any problem (fill or validate errors for at least one element in error array)
+        }
+        
+        return problem
+    }
+
+    function checkMinimunAmountToPass(){
+        let problem = false        
+
+        switch(paymentDetails.option){
+            case "card":                
+            case "paypal":
+                if(minimum_amount > totalPromo){
+                    problem = true
+                }
+                break
+            case "crypto":                
+                if(!fiatEquivalent || fiatEquivalent.estimated_amount === -1){
+                    problem = true
+                }
+                break
+        }
+        
+        return problem
+    }
+
+    function handleContinue(){        
+        if(!validateForm()){            
+            dispatch(updatePaymentDetails({...paymentDetails}))
+            if(!checkMinimunAmountToPass()){
+                setPaymentContinue(true)
+            }
         }
     }
 
-    function getValueFromForm(form, name){
-        for(let i in form){
-            if(form[i].name === name){
-                let value = form[i].value ? form[i].value : ""
-                return value
-            }
-        }
+    function updateQty(value){
+        setQty(value)
+        setTotalPromo(value * price_per_carrot)
     }
 
-    function validateSubmit(data){
-        let pay_card = data.option === "1" ? true : false  
-        let errors = paymentErrors()
-
-        if(pay_card){
-            if(isEmpty(data.name)){
-                errors.name.fill = false
-            }
-            if(!validateInput(data.name, "name")){
-                errors.name.validate = false
-            }
-            if(isEmpty(data.email)){
-                errors.email.fill = false
-            }
-            if(!validateInput(data.email, "email")){
-                errors.email.validate = false
+    useEffect(() => {  
+        setLoadingCryptoData(true)
+        if(totalPromo > 0){
+            let url = "/api/crypto_min"
+            let payload = {
+                amount: totalPromo
             }            
-            if(!isEmpty(data.phone) && !validateInput(data.phone, "phone")){ //if the user wrote a phone number but it is not a phone number
-                errors.phone.validate = false
-            }
-            if(isEmpty(data.cardNumber)){
-                errors.cardNumber.fill = false
-            }
-            if(!validateCard(data.cardNumber)){ // test card details --> 4242424242424242
-                errors.cardNumber.validate = false
-            }
-            if(parseInt(month) === -1){
-                errors.month.fill = false
-            }
-            if(isEmpty(year)){
-                errors.year.fill = false
-            }
-            if(!validateCardMonthYear(year, month)){
-                errors.month.validate = false
-                errors.year.validate = false
-            }
-            if(isEmpty(data.cvv)){
-                errors.cvv.fill = false
-            }
-            if(!validateCVV(data.cardNumber, data.cvv)){
-                errors.cvv.validate = false
-            }
-        }
-        setPaymentError(errors)
-
-        // Check if there is any problem (fill or validate errors for at least one element in error array)
-        let problem = Object.values(errors).some(error => !error.fill || !error.validate)
-        if(!problem){
-            sendPayload(data)
-            dispatch(updatePaymentDetails(data))
-        }
-    }
-
-    function sendPayload(e){
-        setPaymentDetails(e)
-    }
-
-    function sendPayment(){
-        if(amount > 0){
-            let url = ""
-            let payload = {...paymentDetails}
-            payload.amount = amount
-
-            switch(gateway){
-                case "stripe":
-                    url = "/api/stripe"
-                    break
-                case "paypal":
-                    url = "/api/paypal"
-                    break
-                case "crypto":
-                    url = "/api/crypto"
-                    payload.crypto_currency = cryptoChoice.toUpperCase()
-                    break
-                default:
-                    break
-            }
-            
-            if(template === "buy_carrots"){
-                payload.products = [{name_eng: "Carrot", price: price_per_carrot, qty}]
-                payload.description = "Buy carrots"
-            }
-            if(template === "checkout"){
-                payload.products = getProducts(cart, home.market ? home.market : [])
-                payload.description = "Buy vegetables"
-            }
-            
-            if(!isEmpty(url)){
-                setPaymentSending(true)  
-                postData(url, payload).then((data) => {      
-                    if(data && data.result && data.result === "success"){
-                        switch(gateway){
-                            case "stripe":
-                                handlePaymentStripe(data)
-                                break
-                            case "paypal":
-                                handlePaymentPaypal(data)
-                                break
-                            case "crypto": 
-                                handlePaymentCrypto(data)
-                                break 
-                            default:
-                                showError()
-                                break
-                        }
+            postData(url, payload).then((res1) => {
+                if(res1 && res1.payload){
+                    setCryptoData(res1.payload)
+                    const found = res1.payload.find(item => item.currency_from === cryptoChoice)
+                    let fiat_equivalent = found.fiat_equivalent
+                    setCryptoDataFound(found)                    
+                    if(fiat_equivalent && fiat_equivalent < totalPromo){
+                        let url = "/api/crypto_estimated_price"
+                        let currency_from = currency.toLowerCase()
+                        let currency_to = cryptoChoice        
+                        let payload = {
+                            amount: totalPromo,
+                            currency_from, 
+                            currency_to,
+                        }                        
+                        postData(url, payload).then((res2) => {                            
+                            if(res1 && res1.payload){
+                                setFiatEquivalent(res2.payload)
+                                setLoadingCryptoData(false)
+                            }
+                        })
                     } else {
-                        showError(data)
+                        setFiatEquivalent({estimated_amount: -1}) //if it is -1 it means we must show a message
+                        setLoadingCryptoData(false)
                     }
-                })
-            } else {
-                showError({payload: "no_payment_methods"})
-            }
+                }                
+            })
+        }        
+    }, [totalPromo, cryptoChoice])
+
+    function handleCryptoChange(value){
+        const selectedCrypto = cryptoArray.find(crypto => crypto.value === value)
+        setCryptoChoice(selectedCrypto.value)
+        setPaymentDetails({...paymentDetails, crypto: selectedCrypto.value})
+        
+    }
+
+    function handleSendPayment(){
+        let payload = {...paymentDetails}
+        payload.amount = totalPromo
+        let url = ""
+
+        switch(paymentDetails.option){
+            case "card":
+                url = "/api/stripe"
+                break
+            case "paypal":
+                url = "/api/paypal"
+                break
+            case "crypto":
+                url = "/api/crypto"
+                payload.crypto_currency = cryptoChoice.toUpperCase()
+                break
+            default:
+                break
+        }
+        
+        if(template === "buy_carrots"){
+            payload.products = [{name_eng: "Carrot", price: price_per_carrot, qty}]
+            payload.description = "Buy carrots"
+        }
+        if(template === "checkout"){
+            payload.products = getProducts(cart, home.market ? home.market : [])
+            payload.description = "Buy vegetables"
+        }
+        
+        if(!isEmpty(url)){
+            setPaymentSending(true)
+            postData(url, payload).then((data) => {
+                setPaymentSending(false)     
+                if(data && data.result && data.result === "success"){
+                    switch(paymentDetails.option){
+                        case "card":
+                            handlePaymentStripe(data)
+                            break
+                        case "paypal":
+                            handlePaymentPaypal(data)
+                            break
+                        case "crypto": 
+                            handlePaymentCrypto(data)
+                            break 
+                        default:
+                            showError()
+                            break
+                    }
+                } else {
+                    showError(data)
+                }
+            })
         } else {
-            showError()
+            showError({payload: "no_payment_methods"})
         }
     }
 
     function handlePaymentStripe(data){
-        console.log('handlePaymentStripe ', data)
+        const { payload } = data
+        const { id, customer, created, amount, payment_details, status, description, metadata } = payload
+        const { country, city, email, phone, products } = payment_details
+
         let details = {
-            method: "stripe",
-            user_uid: props.user.uuid,
-            payment_id: data.payload.id,
-            customer_id: data.payload.customer,
-            order_date: data.payload.created * 1000,
-            amount: parseFloat((data.payload.amount / 100).toFixed(2)),
-            payment_method: data.payload.payment_details.payment_type,
-            status: data.payload.status,
-            country: data.payload.payment_details.country,
-            city: data.payload.payment_details.city,
-            email: data.payload.payment_details.email,
-            phone: data.payload.payment_details.phone,
-            description: data.payload.description,
-            currency: data.payload.currency.toUpperCase(),
+            method: paymentDetails.option,
+            uuid,
+            payment_id: id,
+            customer_id: customer,
+            order_date: created * 1000,
+            amount: parseFloat((amount / 100).toFixed(2)),
+            payment_method: payment_details.payment_type,
+            status,
+            country,
+            city,
+            email,
+            phone,
+            description,
+            currency: payload.currency.toUpperCase(),
             currencyExchange: currency,
-            items: data.payload.metadata,
+            items: metadata,
             exchange_rates,
-            carrots_update: getCarrotsFromProducts(data.payload.payment_details.products)
+            carrots_update: getCarrotsFromProducts(products)
         }
+
         socket.emit('order_send', details)
     }
 
@@ -422,9 +413,10 @@ function Payment(props){
         } else {
             showError(data)
         }  
-    }    
+    }  
 
     function showError(data={}){
+        console.error(data)
         let payload = {
             open: true,
             template: "error",
@@ -433,90 +425,72 @@ function Payment(props){
             size: 'sm',
         }
         dispatch(changePopup(payload))
-    } 
+    }
 
-    return<Row>
-        {paymentDetails ? <PaymentDetails 
-            {...props} 
-            paymentDetails={paymentDetails}
-            amount={amount}
-            template={template}
-            paymentSending={paymentSending}
-            sendPayment={()=>sendPayment(paymentDetails)}
-            handleBack={(e)=>handleBack(e)}
-        /> : <>
-            <Col sm={8}>
-                <PaymentForm 
-                    {...props} 
-                    getChanges={(e)=>getChanges(e)}
-                    paymentError={paymentError}
-                    cryptoData={cryptoData}
-                    amount={amount}
-                    gateway={gateway}
-                    gatewayDetailsMandatory={gatewayDetailsMandatory}
-                    paymentDetails={payment_details}
-                    radioOne={radioOne}
-                    radioTwo={radioTwo}
-                    radioThree={radioThree} 
-                    cryptoChoice={cryptoChoice}
-                    fiatEquivalent={fiatEquivalent}              
-                    handleChangeCheck={(e)=>handleChangeCheck(e)}
-                    handleCryptoChange={(e)=>handleCryptoChange(e)}
-                />
-            </Col>
-            <Col sm={4}>
-                <Row>
-                    <Col sm={12}>
-                        {(() => {
-                            switch(template) {
-                                case "buy_carrots":
-                                    return <>
-                                        <Counter num={1} max={max_amount} update={(e)=>updateQty(e)} />
-                                        <div className="payment_details_total_price 1">
-                                            <h3>
-                                                <b>{translate({lang: lang, info: "total_price"})}</b>: {convertCurrency(amount, currency, exchange_rates)} {currency}
-                                            </h3>
-                                        </div>
-                                    </>
-                                case "checkout":
-                                    return <PaymentCart {...props} />
-                                default:  
-                                    return
-                            }
-                        })()}
-                    </Col>
-                </Row>
-                <Row>
-                    <Col sm={12} className="button_action_group">
-                        <Button 
-                            type="button"  
-                            className="mybutton button_fullcolor shadow_convex"
-                            onClick={()=>handleSubmit()}
-                        ><FontAwesomeIcon icon={faCartShopping} /> {translate({lang: lang, info: "continue"})}</Button>
-                        {(() => {
-                            let choice = null
-                            let icon = null
-                            switch(template) {
-                                case "buy_carrots":
-                                    choice = "dashboard"
-                                    icon = faUser
-                                    break
-                                case "checkout":
-                                    choice = "market"
-                                    icon = faStore
-                                    break
-                                default:
-                            }
-                            return <>{choice && icon ? <Button 
-                                type="button"  
-                                className="mybutton button_fullcolor shadow_convex"
-                                onClick={()=>handleBack(choice)}
-                            ><FontAwesomeIcon icon={icon} /> {translate({lang: lang, info: choice})}</Button> : null}</>
-                        })()}
-                    </Col>
-                </Row>
-            </Col>
-        </>}
-    </Row>
+    return <form id="payment_form">        
+        <Row>
+            {paymentContinue ? <PaymentDetails 
+                {...props} 
+                paymentDetails={paymentDetails}
+                template={template}
+                amount={totalPromo}
+                cryptoArray={cryptoArray}
+                fiatEquivalent={fiatEquivalent}
+                paymentSending={paymentSending}
+                handleBack={(e)=>handleBack(e)}
+                handleSendPayment={()=>handleSendPayment()}
+            /> : <>
+                <Col sm={8}>
+                    <PaymentForm 
+                        {...props} 
+                        paymentDetails={paymentDetails}
+                        amount={totalPromo}
+                        minimum_amount_usd={minimum_amount_usd}
+                        minimum_amount={minimum_amount}
+                        editCardNumber={editCardNumber}
+                        paymentError={paymentError}                        
+                        filteredCountries={filteredCountries}
+                        filteredCountry={filteredCountry}
+                        filteredCities={filteredCities}
+                        filteredCity={filteredCity}
+                        monthOptions={monthOptions}
+                        yearOptions={yearOptions}
+                        months={months}
+                        cryptoChoice={cryptoChoice}
+                        cryptoArray={cryptoArray}
+                        cryptoData={cryptoData}
+                        cryptoDataFound={cryptoDataFound}
+                        fiatEquivalent={fiatEquivalent}
+                        loadingCryptoData={loadingCryptoData}
+                        handleCountryChange={(e)=>handleCountryChange(e)}
+                        handleFilterCountries={(e)=>handleFilterCountries(e)}
+                        handleCityChange={(e)=>handleCityChange(e)}
+                        handleFilterCities={(e)=>handleFilterCities(e)}
+                        handleChangeCheck={(e)=>handleChangeCheck(e)}
+                        handleInputChange={(e)=>handleInputChange(e)}
+                        handleEditCardNumber={()=>handleEditCardNumber()}
+                        handleSaveCardNumber={()=>handleSaveCardNumber()}
+                        changeMonth={(e)=>changeMonth(e)}
+                        changeYear={(e)=>changeYear(e)}
+                        handleCryptoChange={(e)=>handleCryptoChange(e)}
+                    />
+                </Col>
+                <Col sm={4}>
+                    <PaymentCart 
+                        {...props}
+                        cart={cart}
+                        promo={promo}
+                        totalPromo={totalPromo}
+                        total={total}
+                        qty={qty}
+                        maxAmount={maxAmount}
+                        updateQty={(e)=>updateQty(e)}
+                        handleContinue={()=>handleContinue()}
+                        handleBack={(e)=>handleBack(e)}
+                    />
+                </Col>
+            </>}
+        </Row>
+    </form>
 }
 export default Payment

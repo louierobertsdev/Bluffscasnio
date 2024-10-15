@@ -10,14 +10,17 @@ import { getWindowDimensions } from '../../../utils/utils'
 import Header from '../../partials/header'
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
 import {faArrowRotateLeft} from '@fortawesome/free-solid-svg-icons'
+import ContactAddress from './contactAddress'
 
 function Contact(props){
     const {socket, home, settings} = props
     const {lang} = settings
-    let locations = home.contact    
-    const [contactElement, setContactElement] = useState(null)
-    let dispatch = useDispatch()
+    let locations = home.contact
     let default_location = locations[0][lang] ? locations[0][lang] : locations[0]["ENG"]
+    
+    let dispatch = useDispatch()
+
+    const [contactElement, setContactElement] = useState(null)
     const [mapCenter, setMapCenter] = useState(default_location.map)
     const [markerPosition, setMarkerPosition] = useState(default_location.marker)
     const [country, setCountry] = useState(default_location.country)
@@ -33,16 +36,14 @@ function Contact(props){
     }
 
     function handleChooseContactElement(x, i){
-        if(x){
-            setIndex(i)
-            let location = locations[i][lang]
-            setContactElement(x)
-            setCountry(location.country)
-            setCity(location.city)
-            setMapCenter(location.map)
-            setMarkerPosition(location.marker)
-            setZoom(10) 
-        }
+        setIndex(i)
+        let location = locations[i][lang]
+        setContactElement(x)
+        setCountry(location.country)
+        setCity(location.city)
+        setMapCenter(location.map)
+        setMarkerPosition(location.marker)
+        setZoom(10) 
     }
 
     function handleResize() {
@@ -76,11 +77,14 @@ function Contact(props){
                             <ContactForm lang={lang} socket={socket} />
                         </Col>
                         <Col md={8}>
-                            <ContactList 
+                            {locations.length > 1 ? <ContactList 
                                 lang={lang} 
                                 list={locations} 
                                 handleChooseContactElement={(e, i)=>handleChooseContactElement(e, i)}
-                            />
+                            /> : <ContactAddress 
+                                lang={lang} 
+                                location={locations[0]} 
+                            />}
                             <ContactMap 
                                 lang={lang} 
                                 contactElement={contactElement}
@@ -93,11 +97,14 @@ function Contact(props){
                         </Col>
                     </Row> : <Row>                
                         <Col md={8}>
-                            <ContactList 
+                            {locations.length > 1 ? <ContactList 
                                 lang={lang} 
                                 list={locations} 
                                 handleChooseContactElement={(e, i)=>handleChooseContactElement(e, i)}
-                            />
+                            /> : <ContactAddress 
+                                lang={lang} 
+                                location={locations[0]} 
+                            />}
                         </Col>
                         <Col md={4}>
                             <ContactForm lang={lang} socket={socket} />

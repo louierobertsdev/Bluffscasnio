@@ -1,52 +1,63 @@
 import React from 'react'
 import { translate } from '../../../translations/translate'
 import { Row, Col, Button } from 'react-bootstrap'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { checkoutData, convertCurrency, showCardNumber } from '../../../utils/utils'
+import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
 import {faStore, faUser, faCartShopping, faArrowRotateLeft} from '@fortawesome/free-solid-svg-icons'
 import Spinner from '../spinner'
 
 function PaymentDetails(props){
-    const {
-        paymentDetails, template, settings, paymentSending, amount, fiatEquivalent, cryptoArray, exchange_rates, 
-        handleSendPayment, handleBack
-    } = props 
+    const {template, paymentDetails, amount, settings, exchange_rates, paymentSending, handleBack} = props 
     const {lang, currency} = settings
     const monthOptions = checkoutData().monthOptions
 
-    return <>
-        <p>{translate({lang: lang, info: "under_construction"})}</p>    
+    let paymentOptions = {
+        "1": "pay_card",
+        "2": "pay_paypal",
+        "3": "pay_crypto"
+    }
+    let cryptoArray = {
+        btc: "Bitcoin",
+        ltc: "Litcoin"
+    }
+
+    function sendPayment(){
+        if(!paymentSending){
+            props.sendPayment()
+        }
+    }
+
+    return <>        
         {paymentDetails ? <>
             <Row id="payment_details">                
                 <Col sm={8}>
-                {(() => {
+                    {(() => {
                         switch (paymentDetails.option) {
-                            case "paypal":
+                            case "2": //paypal
                                 return <Row>
                                     <Col sm={12} className="payment_details_box">
                                         <div className="payment_details_title">
                                             <h3>{translate({lang: lang, info: "payment_info"})}</h3>
                                         </div>
                                         <div className="payment_details_body">
-                                            <p><strong>{translate({ lang: lang, info: "payment_methode" })}:</strong> {translate({ lang: lang, info: paymentDetails.option })}</p>
+                                            <p><strong>{translate({ lang: lang, info: "payment_methode" })}:</strong> {translate({ lang: lang, info: paymentOptions[paymentDetails.option] })}</p>
+                                            <p></p>
                                         </div>
                                     </Col>
                                 </Row>
-                            case "crypto": 
-                                let cryptoDetails = cryptoArray.find(item => item.value === fiatEquivalent.currency_to)
+                            case "3": //crypto
                                 return <Row>
                                     <Col sm={12} className="payment_details_box">
                                         <div className="payment_details_title">
                                             <h3>{translate({lang: lang, info: "payment_info"})}</h3>
                                         </div>
                                         <div className="payment_details_body">
-                                            <p><strong>{translate({ lang: lang, info: "payment_methode" })}:</strong> {translate({ lang: lang, info: paymentDetails.option })}</p>
-                                            <p><strong>{translate({ lang: lang, info: "crypto" })}:</strong> {cryptoDetails ? cryptoDetails.text : "-"}</p>
-                                            <p><strong>{translate({lang: lang, info: "your_amount_in_fiat_equivalent"})}:</strong> {fiatEquivalent.estimated_amount} {fiatEquivalent.currency_to}</p>
+                                            <p><strong>{translate({ lang: lang, info: "payment_methode" })}:</strong> {translate({ lang: lang, info: paymentOptions[paymentDetails.option] })}</p>
+                                            <p><strong>{translate({ lang: lang, info: "crypto" })}:</strong> {paymentDetails.crypto && cryptoArray[paymentDetails.crypto] ? cryptoArray[paymentDetails.crypto] : '-'}</p>
                                         </div>
                                     </Col>
                                 </Row>
-                            case "card":
+                            case "1": //card
                             default:
                                 return <Row>
                                     <Col sm={6} className="payment_details_box">
@@ -66,7 +77,7 @@ function PaymentDetails(props){
                                             <h3>{translate({lang: lang, info: "payment_info"})}</h3>
                                         </div>
                                         <div className="payment_details_body">
-                                            <p><strong>{translate({ lang: lang, info: "payment_methode" })}:</strong> {translate({ lang: lang, info: paymentDetails.option })}</p>
+                                            <p><strong>{translate({ lang: lang, info: "payment_methode" })}:</strong> {translate({ lang: lang, info: paymentOptions[paymentDetails.option] })}</p>
                                             <p><strong>{translate({ lang: lang, info: "card_number" })}:</strong> {paymentDetails.cardNumber ? showCardNumber(paymentDetails.cardNumber) : '-'}</p>
                                             <p><strong>{translate({ lang: lang, info: "month" })}:</strong> {translate({ lang: lang, info: monthOptions[parseInt(paymentDetails.month)] })}</p>
                                             <p><strong>{translate({ lang: lang, info: "year" })}:</strong> {paymentDetails.year ? paymentDetails.year : '-'}</p>
@@ -78,7 +89,7 @@ function PaymentDetails(props){
                     })()}
                 </Col>
                 <Col sm={4}>
-                <Row>
+                    <Row>
                         <Col sm={12}>
                             <div className="payment_details_total_price 2">
                                 <h3>
@@ -92,7 +103,7 @@ function PaymentDetails(props){
                             <Button 
                                 type="button"  
                                 className="mybutton button_fullcolor shadow_convex"
-                                onClick={()=>handleSendPayment()}
+                                onClick={()=>sendPayment()}
                             >{paymentSending ? <>
                                 <Spinner size="small" color="black"/>
                             </> : <>
